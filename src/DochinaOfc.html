@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedidos de Pastéis - Restaurante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f7f7f7; }
+    header { background: #333; color: #fff; padding: 1em; text-align: center; }
+    main { display: flex; flex-wrap: wrap; justify-content: center; gap: 2em; padding: 2em; }
+    section { background: #fff; padding: 1em; border-radius: 8px; box-shadow: 0 2px 8px #0001; min-width: 320px; }
+    h2 { margin-top: 0; }
+    label { display: block; margin-top: 1em; }
+    input, select, button, textarea { margin-top: 0.5em; width: 100%; padding: 0.5em; border-radius: 4px; border: 1px solid #ccc; }
+    button { background: #333; color: #fff; border: none; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    ul { padding: 0; list-style: none; }
+    li { margin-bottom: 0.5em; }
+    .inactive { color: #aaa; text-decoration: line-through; }
+    .pedido-pronto { background: #d4edda; }
+    .pedido-andamento { background: #fff3cd; }
+    .pedido { margin-bottom: 1em; padding: 0.5em; border-radius: 4px; }
+    .admin { background: #e9ecef; padding: 1em; border-radius: 8px; margin-bottom: 2em; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pastelaria do China</h1>
+  </header>
+  <main>
+    <!-- Cadastro de Usuário -->
+    <section>
+      <h2>Login do Garçon</h2>
+      <form id="login-form">
+        <label>Nome: <input type="text" id="login-nome" required></label>
+        <label>Matrícula: <input type="text" id="login-matricula" required></label>
+        <label>Senha: <input type="password" id="login-senha" required></label>
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="login-msg"></div>
+    </section>
+
+    <!-- Tela de pedidos (aparece após login) -->
+    <section id="pedido-section" style="display:none;">
+      <h2>Fazer Pedido</h2>
+      <form id="pedido-form">
+        <label>Mesa:
+          <input type="number" id="mesa-numero" min="1" required>
+        </label>
+        <label>Selecione os pastéis:</label>
+        <div id="pastel-checkbox-list"></div>
+        <label>Observação (opcional):
+          <textarea id="pedido-observacao"></textarea>
+        </label>
+        <button type="submit">Enviar Pedido</button>
+      </form>
+      <div id="pedido-msg"></div>
+      <h3>Pedidos da Mesa</h3>
+      <div id="pedidos-mesa"></div>
+    </section>
+
+    <!-- Tela da cozinha -->
+    <section>
+      <h2>Tela da Cozinha</h2>
+      <div id="cozinha-pedidos"></div>
+    </section>
+
+    <!-- Administração de Pastéis -->
+    <section class="admin">
+      <h2>Administração de Pastéis</h2>
+      <form id="pastel-form">
+        <label>Nome: <input type="text" id="pastel-nome" required></label>
+        <label>Preço: <input type="number" id="pastel-preco" min="0.01" step="0.01" required></label>
+        <button type="submit">Cadastrar Pastel</button>
+      </form>
+      <h3>Pastéis Cadastrados</h3>
+      <ul id="admin-pastel-list"></ul>
+      <h4>Desabilitar por ingrediente:</h4>
+      <input type="text" id="ingrediente-nome" placeholder="Ex: queijo">
+      <button id="desabilitar-ingrediente">Desabilitar Pastéis com Ingrediente</button>
+    </section>
+  </main>
+  <script>
+    // Dados simulados
+    let usuarios = [
+      { nome: "João", matricula: "123", senha: "123", autorizado: true },
+      { nome: "Maria", matricula: "456", senha: "456", autorizado: true }
+    ];
+    let pastels = [
+      { id: 1, nome: "Pastel de carne", preco: 5.00, ativo: true, ingredientes: ["carne"] },
+      { id: 2, nome: "Pastel de queijo", preco: 4.50, ativo: true, ingredientes: ["queijo"] },
+      { id: 3, nome: "Pastel de frango", preco: 5.50, ativo: true, ingredientes: ["frango"] },
+      { id: 4, nome: "Pastel de pizza", preco: 6.00, ativo: true, ingredientes: ["queijo", "tomate", "presunto"] },
+      { id: 5, nome: "Pastel sem preço", preco: null, ativo: true, ingredientes: ["ar"] }
+    ];
+    let pedidos = [];
+    let usuarioLogado = null;
+
+    // Login
+    document.getElementById('login-form').onsubmit = function(e) {
+      e.preventDefault();
+      const nome = document.getElementById('login-nome').value.trim();
+      const matricula = document.getElementById('login-matricula').value.trim();
+      const senha = document.getElementById('login-senha').value.trim();
+      const user = usuarios.find(u => u.nome === nome && u.matricula === matricula && u.senha === senha && u.autorizado);
+      if (user) {
+        usuarioLogado = user;
+        document.getElementById('login-msg').textContent = "Login realizado!";
+        document.getElementById('pedido-section').style.display = "";
+        atualizarPastelCheckboxList();
+        atualizarPedidosMesa();
+      } else {
+        document.getElementById('login-msg').textContent = "Usuário ou senha inválidos.";
+      }
+    };
+
+    // Cadastro de pastel
+    document.getElementById('pastel-form').onsubmit = function(e) {
+      e.preventDefault();
+      const nome = document.getElementById('pastel-nome').value.trim();
+      const preco = parseFloat(document.getElementById('pastel-preco').value);
+      if (!nome || isNaN(preco) || preco <= 0) return;
+      pastels.push({ id: Date.now(), nome, preco, ativo: true, ingredientes: nome.toLowerCase().split(" de ")[1] ? [nome.toLowerCase().split(" de ")[1]] : [] });
+      atualizarAdminPastelList();
+      atualizarPastelCheckboxList();
+      document.getElementById('pastel-form').reset();
+    };
+
+    // Ativa/desativa pastel
+    function atualizarAdminPastelList() {
+      const ul = document.getElementById('admin-pastel-list');
+      ul.innerHTML = "";
+      pastels.forEach((p, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="${!p.ativo || !p.preco ? 'inactive' : ''}">${p.nome} - ${p.preco ? 'R$ ' + p.preco.toFixed(2) : 'Sem preço'}</span>
+        <label><input type="checkbox" ${p.ativo ? 'checked' : ''} onchange="toggleAtivo(${p.id})"> Ativo</label>`;
+        ul.appendChild(li);
+      });
+    }
+    window.toggleAtivo = function(id) {
+      const pastel = pastels.find(p => p.id === id);
+      if (pastel) {
+        pastel.ativo = !pastel.ativo;
+        atualizarAdminPastelList();
+        atualizarPastelCheckboxList();
+      }
+    };
+
+    // Desabilitar por ingrediente
+    document.getElementById('desabilitar-ingrediente').onclick = function() {
+      const ingrediente = document.getElementById('ingrediente-nome').value.trim().toLowerCase();
+      if (!ingrediente) return;
+      pastels.forEach(p => {
+        if (p.ingredientes && p.ingredientes.includes(ingrediente)) p.ativo = false;
+      });
+      atualizarAdminPastelList();
+      atualizarPastelCheckboxList();
+      document.getElementById('ingrediente-nome').value = "";
+    };
+
+    // Atualiza lista de pastéis disponíveis para pedido
+    function atualizarPastelCheckboxList() {
+      const div = document.getElementById('pastel-checkbox-list');
+      div.innerHTML = "";
+      pastels.filter(p => p.ativo && p.preco).forEach(p => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${p.id}"> ${p.nome} (R$ ${p.preco.toFixed(2)})`;
+        div.appendChild(label);
+      });
+    }
+
+    // Fazer pedido
+    document.getElementById('pedido-form').onsubmit = function(e) {
+      e.preventDefault();
+      if (!usuarioLogado) return;
+      const mesa = document.getElementById('mesa-numero').value.trim();
+      const observacao = document.getElementById('pedido-observacao').value.trim();
+      const pastelIds = Array.from(document.querySelectorAll('#pastel-checkbox-list input:checked')).map(cb => parseInt(cb.value));
+      if (!mesa || pastelIds.length === 0) {
+        document.getElementById('pedido-msg').textContent = "Selecione ao menos um pastel e informe a mesa.";
+        return;
+      }
+      const pastelsPedido = pastelIds.map(id => pastels.find(p => p.id === id));
+      const precoFinal = pastelsPedido.reduce((acc, p) => acc + (p.preco || 0), 0);
+      const pedido = {
+        id: Date.now(),
+        mesa,
+        usuario: usuarioLogado.nome,
+        pastels: pastelsPedido,
+        observacao,
+        precoFinal,
+        status: "andamento"
+      };
+      pedidos.push(pedido);
+      document.getElementById('pedido-msg').textContent = "Pedido enviado!";
+      atualizarPedidosMesa();
+      atualizarCozinhaPedidos();
+      document.getElementById('pedido-form').reset();
+    };
+
+    // Atualiza pedidos da mesa do usuário logado
+    function atualizarPedidosMesa() {
+      const div = document.getElementById('pedidos-mesa');
+      if (!usuarioLogado) { div.innerHTML = ""; return; }
+      const mesa = document.getElementById('mesa-numero').value.trim();
+      const pedidosMesa = pedidos.filter(p => p.usuario === usuarioLogado.nome && (!mesa || p.mesa === mesa));
+      div.innerHTML = pedidosMesa.map(p => `
+        <div class="pedido pedido-${p.status}">
+          <b>Mesa:</b> ${p.mesa} <br>
+          <b>Pastéis:</b> ${p.pastels.map(pt => pt.nome).join(", ")} <br>
+          <b>Observação:</b> ${p.observacao || "-"} <br>
+          <b>Status:</b> ${p.status === "pronto" ? "Pronto!" : "Em andamento"} <br>
+          <b>Total:</b> R$ ${p.precoFinal.toFixed(2)}
+        </div>
+      `).join("");
+    }
+
+    // Atualiza pedidos na tela da cozinha
+    function atualizarCozinhaPedidos() {
+      const div = document.getElementById('cozinha-pedidos');
+      div.innerHTML = pedidos.map(p => `
+        <div class="pedido pedido-${p.status}">
+          <b>Mesa:</b> ${p.mesa} <br>
+          <b>Pastéis:</b> ${p.pastels.map(pt => pt.nome).join(", ")} <br>
+          <b>Observação:</b> ${p.observacao || "-"} <br>
+          <b>Garçon:</b> ${p.usuario} <br>
+          <b>Status:</b> ${p.status === "pronto" ? "Pronto!" : "Em andamento"} <br>
+          <b>Total:</b> R$ ${p.precoFinal.toFixed(2)} <br>
+          ${p.status === "andamento" ? `<button onclick="marcarPronto(${p.id})">Marcar como pronto</button>` : ""}
+        </div>
+      `).join("");
+    }
+    window.marcarPronto = function(id) {
+      const pedido = pedidos.find(p => p.id === id);
+      if (pedido) {
+        pedido.status = "pronto";
+        atualizarPedidosMesa();
+        atualizarCozinhaPedidos();
+        alert(`Pedido da mesa ${pedido.mesa} está pronto!`);
+      }
+    };
+
+    // Inicialização
+    atualizarAdminPastelList();
+    atualizarCozinhaPedidos();
+  </script>
+</body>
+</html>
