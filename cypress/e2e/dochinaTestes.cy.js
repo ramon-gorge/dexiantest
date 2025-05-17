@@ -8,6 +8,7 @@ describe('Pastelaria do China', () => {
         cy.loginJoao()
     });
 
+
     it('Login com sucesso', () => {
         //Garantir que usuario esta logado
         cy.get('#login-msg')
@@ -38,6 +39,14 @@ describe('Pastelaria do China', () => {
       })
     })
 
+    it('Fazer um pedido sem pastel', () => {
+        cy.get(pedido.numeroMesa).type('15')
+        cy.get(pedido.enviarPedido).click()
+        cy.get('#pedido-msg')
+        .contains('Selecione ao menos um pastel e informe a mesa.')
+        .should('be.visible')
+    })
+
     it('Criar Novo Pastel', () => {
         const novoPastel = {
             nomePastel: 'Pastel Especial',
@@ -46,6 +55,15 @@ describe('Pastelaria do China', () => {
        cy.criarPastel(novoPastel)
        cy.contains('#pastel-checkbox-list label', novoPastel.nomePastel).should('exist')
        cy.contains('#admin-pastel-list', novoPastel.nomePastel).should('exist')
+    })
+
+       it('Criar Pastel comn texto no lugar do valor', () => {
+        const novoPastel = {
+            nomePastel: 'Pastel sem preço',
+            precoPastel: 'Teste',
+        }
+       cy.criarPastel(novoPastel)
+       cy.contains('#pastel-checkbox-list label', novoPastel.nomePastel).should('not.exist')
     })
 
     it('Inativar Pastel pelo Checkbox', () => {

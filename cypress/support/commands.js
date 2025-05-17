@@ -15,3 +15,10 @@ Cypress.Commands.add('criarPastel', novoPastel => {
     cy.get(criarPasteis.precoPastel).type(novoPastel.precoPastel);
     cy.get(criarPasteis.criarPastelBtn).click();
 });
+
+Cypress.Commands.add('loginInvalido', () => {
+    cy.get(fazerLogin.loginNome).type('Estevam');
+    cy.get(fazerLogin.loginMatricula).type('123456');
+    cy.get(fazerLogin.loginSenha).type('123456');
+    cy.get(fazerLogin.loginEntrar).click();
+});
