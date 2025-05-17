@@ -30,7 +30,7 @@
   <main>
     <!-- Cadastro de Usuário -->
     <section>
-      <h2>Login do Garçon</h2>
+      <h2>Login do Garçom</h2>
       <form id="login-form">
         <label>Nome: <input type="text" id="login-nome" required></label>
         <label>Matrícula: <input type="text" id="login-matricula" required></label>
@@ -223,7 +223,7 @@
           <b>Mesa:</b> ${p.mesa} <br>
           <b>Pastéis:</b> ${p.pastels.map(pt => pt.nome).join(", ")} <br>
           <b>Observação:</b> ${p.observacao || "-"} <br>
-          <b>Garçon:</b> ${p.usuario} <br>
+          <b>Garçom:</b> ${p.usuario} <br>
           <b>Status:</b> ${p.status === "pronto" ? "Pronto!" : "Em andamento"} <br>
           <b>Total:</b> R$ ${p.precoFinal.toFixed(2)} <br>
           ${p.status === "andamento" ? `<button onclick="marcarPronto(${p.id})">Marcar como pronto</button>` : ""}
